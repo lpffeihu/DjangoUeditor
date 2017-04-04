@@ -124,8 +124,14 @@ class UEditorWidget(forms.Textarea):
 
 
         uSettings["settings"] = self.ueditor_settings.copy()
+        if self.attrs and self.attrs.get('deployRoot'):
+            deploy_root = self.attrs.get('deployRoot')
+            if not deploy_root.endswith('/'):
+                deploy_root += '/'
+        else:
+            deploy_root = '/'
         uSettings["settings"].update({
-            "serverUrl": "/ueditor/controller/?%s" % urlencode(self._upload_settings)
+            "serverUrl": "%sueditor/controller/?%s" % (deploy_root, urlencode(self._upload_settings))
         })
         #生成事件侦听
         if self.event_handler:
