@@ -7,6 +7,9 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime,random
 import urllib
+from django.core.files.storage import default_storage
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import StringIO
 
 def get_path_format_vars():
     return {
@@ -19,16 +22,13 @@ def get_path_format_vars():
         "rnd":random.randrange(100,999)
     }
 
+
 #保存上传的文件
 def save_upload_file(PostFile,FilePath):
     try:
-        f = open(FilePath, 'wb')
-        for chunk in PostFile.chunks():
-            f.write(chunk)
+        default_storage.save(FilePath, PostFile)
     except Exception,E:
-        f.close()
         return u"写入文件错误:"+ E.message
-    f.close()
     return u"SUCCESS"
 
 
@@ -178,7 +178,8 @@ def UploadFile(request):
     upload_path_format={
         "uploadfile":"filePathFormat",
         "uploadimage":"imagePathFormat",
-        "uploadscrawl":"scrawlPathFormat",
+        # "uploadscrawl":"scrawlPathFormat",
+        "uploadscrawl":"imagePathFormat",  # 前端路径没有返回scrawlPathFormat, 因此沿用imagePathFormat
         "uploadvideo":"videoPathFormat"
     }
 
@@ -285,8 +286,6 @@ def get_output_path(request,path_format,path_format_var):
     if not OutputFile:#如果OutputFile为空说明传入的OutputPathFormat没有包含文件名，因此需要用默认的文件名
         OutputFile=USettings.UEditorSettings["defaultPathFormat"] % path_format_var
         OutputPathFormat=os.path.join(OutputPathFormat,OutputFile)
-    if not os.path.exists(OutputPath):
-        os.makedirs(OutputPath)
     return ( OutputPathFormat,OutputPath,OutputFile)
 
 #涂鸦功能上传处理
@@ -295,9 +294,9 @@ def save_scrawl_file(request,filename):
     import base64
     try:
         content=request.POST.get(USettings.UEditorUploadSettings.get("scrawlFieldName","upfile"))
-        f = open(filename, 'wb')
-        f.write(base64.decodestring(content))
-        f.close()
+        strio = StringIO.StringIO(base64.decodestring(content))
+        newFile = InMemoryUploadedFile(strio, None, 'xxx.png', 'image/png', strio.len, None)
+        default_storage.save(filename, newFile)
         state="SUCCESS"
     except Exception,E:
         state="写入图片文件错误:%s" % E.message
